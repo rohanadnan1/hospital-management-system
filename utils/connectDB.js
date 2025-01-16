@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const connectDB = async () => {
   try {
     const response = await mongoose.connect(
-      `${process.env.MONGODB_CONNECTION_STRING}/hospital-data`
+      `${process.env.MONGODB_CONNECTION_STRING}`
     );
     console.log("MongoDB connection established");
     if (response) {

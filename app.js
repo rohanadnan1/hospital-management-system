@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import pateintRouter from "./routes/patient.routes.js";
 
 const app = express();
 
@@ -7,8 +8,8 @@ dotenv.config({
   path: ".env",
 });
 
-app.route("/").get(async (req, res) => {
-  res.json({ message: "Hello, World!" });
-});
+app.use(express.json());
+
+app.use("/patient", pateintRouter);
 
 export default app;
