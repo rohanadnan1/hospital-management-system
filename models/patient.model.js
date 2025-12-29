@@ -46,6 +46,9 @@ const patientSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Bed",
     },
+    refreshToken: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

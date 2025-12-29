@@ -47,6 +47,7 @@ doctorSchema.methods.generateAccessToken = function () {
     {
       _id: this._id,
       email: this.email,
+      role: "doctor",
       username: this.username,
       fullName: this.fullName,
     },
