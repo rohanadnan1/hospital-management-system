@@ -37,6 +37,9 @@ const doctorSchema = new mongoose.Schema({
   otpExpiry: {
     type: Date,
   },
+  refreshToken: {
+    type: String,
+  }
 });
 
 doctorSchema.virtual("assignedPatientsCount").get(function () {
