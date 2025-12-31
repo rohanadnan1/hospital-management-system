@@ -31,6 +31,12 @@ const doctorSchema = new mongoose.Schema({
     default: true,
     required: true,
   },
+  otp: {
+    type: String,
+  },
+  otpExpiry: {
+    type: Date,
+  },
 });
 
 doctorSchema.virtual("assignedPatientsCount").get(function () {

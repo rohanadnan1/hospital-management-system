@@ -67,7 +67,7 @@ export const registerDoctor = asyncHandler(async (req, res) => {
   }
 
   // 3. Password hashing
-  hashPassword(password);
+  const hashedPassword = await hashPassword(password);
 
   // 4. Doctor creation
   const doctor = await Doctor.create({
