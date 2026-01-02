@@ -39,7 +39,12 @@ const doctorSchema = new mongoose.Schema({
   },
   refreshToken: {
     type: String,
-  }
+  },
+  role: {
+    type: String,
+    default: "doctor",
+    immutable: true, // no one can change the role
+  },
 });
 
 doctorSchema.virtual("assignedPatientsCount").get(function () {

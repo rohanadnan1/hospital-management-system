@@ -20,6 +20,7 @@ export const loginDoctorStep1 = asyncHandler(async (req, res) => {
         return res.status(401).json(new ApiResponse(401, null, "Invalid credentials"));
     }
 
+    // creating random otp 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     doctor.otp = otp;
     doctor.otpExpiry = Date.now() + 10 * 60 * 1000;

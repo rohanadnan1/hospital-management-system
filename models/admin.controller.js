@@ -7,7 +7,7 @@ const adminSchema = new mongoose.Schema({
   role: { 
     type: String, 
     default: "admin", 
-    immutable: true // Takay koi role change na kar sake
+    immutable: true // no one can change the role
   }
 }, { timestamps: true });
 

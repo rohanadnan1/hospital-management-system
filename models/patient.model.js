@@ -49,6 +49,17 @@ const patientSchema = new mongoose.Schema(
     refreshToken: {
       type: String,
     },
+    role: {
+      type: String,
+      default: "patient",
+      immutable: true, // no one can change the role
+    },
+    otp: {
+      type: String,
+    },
+    otpExpiry: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );
