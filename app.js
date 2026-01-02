@@ -10,10 +10,13 @@ dotenv.config({
   path: ".env",
 });
 
-app.use(express.json());
+app.use(express.json({limit: "16kb"}));
+app.use(express.urlencoded({extended: true, limit: "16kb"}));
+app.use(express.static("public"));
 
 app.use("/patient", pateintRouter);
 app.use("/admin", adminRouter);
 app.use("/doctor", doctorRouter);
+
 
 export default app;

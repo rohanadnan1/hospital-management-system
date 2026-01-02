@@ -1,9 +1,9 @@
 import jwt from "jsonwebtoken";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/apiResponse.js";
+import Patient from "../models/patient.model.js";
 
 export const verifyAdmin = asyncHandler(async (req, res, next) => {
-    // 1. Token nikalna (Cookies ya Authorization Header se)
     const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
 
     if (!token) {
@@ -23,9 +23,31 @@ export const verifyAdmin = asyncHandler(async (req, res, next) => {
         );
     }
 
-    // 4. Request object mein save karna
     req.user = decodedToken;
-    
-    // Agle middleware ya controller par bhejna
+
     next();
+});
+
+export const verifyPatient = asyncHandler(async (req, res, next) => {
+    try {
+        const token = req.header("Authorization")?.replace("Bearer ", "");
+
+        if (!token) {
+            return res.status(401).json(new ApiResponse(401, null, "Unauthorized request: No token provided"));
+        }
+
+        const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+
+        const patient = await Patient.findById(decodedToken?._id).select("-password -refreshToken");
+
+        if (!patient) {
+            return res.status(401).json(new ApiResponse(401, null, "Invalid Access Token"));
+        }
+
+        req.patient = patient;
+        next();
+        
+    } catch (error) {
+        return res.status(401).json(new ApiResponse(401, null, error?.message || "Invalid Access Token"));
+    }
 });

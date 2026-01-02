@@ -24,9 +24,13 @@ const patientSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    medicalHistory: {
-      type: Array,
-    },
+    medicalHistory: [
+      {
+        reportUrl: String,
+        aiSummary: String,
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
     currentCondition: {
       type: String,
       enum: ["emergency", "normal", "critical"],

@@ -3,7 +3,7 @@ import {
   adminLogin,
   registerDoctor,
 } from "../controllers/admin/admin.controller.js";
-import { verifyAdmin } from "../middlewares/admin.middlewares.js";
+import { verifyAdmin } from "../middlewares/auth.middlewares.js";
 import { registerPatient } from "../controllers/admin/admin.controller.js";
 
 const router = express.Router();
