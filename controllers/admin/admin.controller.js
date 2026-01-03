@@ -7,6 +7,8 @@ import { hashPassword } from "../../utils/passwords.js";
 import Bed from "../../models/bed.model.js";
 import { ApiError } from "../../utils/apiError.js";
 
+// admin can login using this controller
+
 export const adminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -19,7 +21,7 @@ export const adminLogin = asyncHandler(async (req, res) => {
       .json(new ApiResponse(401, null, "Invalid Admin Credentials!"));
   }
 
-  const adminToken = jwt.sign(
+  const adminToken = jwt.sign( // a token a generated with a long expiry of 1d because admin don't need to a db and there is no refresh token for admin
     { role: "admin", email: ADMIN_EMAIL },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "1d" }

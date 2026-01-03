@@ -1,11 +1,14 @@
 import nodemailer from "nodemailer";
 
 export const sendEmail = async (email, otp) => {
+
+  // this transporter works as a vehicle that drops our email using the service in my case gmail
+  
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: process.env.EMAIL,
-      pass: process.env.EMAIL_PASS,
+      user: process.env.EMAIL, // this contains my email from which i am sending those email
+      pass: process.env.EMAIL_PASS, // this contains the gmail app pass (not the actual gmail pass)
     },
   });
 

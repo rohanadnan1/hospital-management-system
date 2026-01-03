@@ -2,12 +2,14 @@ import Bed from "../../models/bed.model.js";
 
 export const initializeBeds = async () => {
     try {
+
+        // counting the documents in the Bed collection
         const bedCount = await Bed.countDocuments();
         
         if (bedCount === 0) {
-            const beds = [];
+            const beds = []; // an empty array to initialize beds
             for (let i = 1; i <= 10; i++) {
-                beds.push({
+                beds.push({  // populating the beds in the database 
                     bedNumber: i,
                     diseaseCategory: "General", 
                     bedType: i <= 3 ? "critical" : "normal",

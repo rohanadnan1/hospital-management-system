@@ -4,6 +4,9 @@ import Doctor from "../../models/doctor.model.js";
 import bcrypt from "bcrypt";
 import { sendEmail } from "../../utils/sendMail.js";
 import jwt from "jsonwebtoken";
+import { ApiError } from "../../utils/apiError.js";
+
+// this controller is for the first login step where the doctor enters his/her email and pass and gets an otp on their email
 
 export const loginDoctorStep1 = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -46,6 +49,8 @@ export const loginDoctorStep1 = asyncHandler(async (req, res) => {
       )
     );
 });
+
+// this controller is the 2nd login step where doctor confirms his/her otp and then the access is granted
 
 export const verifyOTPAndLogin = asyncHandler(async (req, res) => {
   // session token which we have saved in the previous step to get the user
@@ -97,6 +102,8 @@ export const verifyOTPAndLogin = asyncHandler(async (req, res) => {
     );
 });
 
+// this controller is for the doctor to see their assigned patients data
+
 export const getAssignedPatients = asyncHandler(async (req, res) => {
   const doctorId = req.user?._id;
 
@@ -130,4 +137,71 @@ export const getAssignedPatients = asyncHandler(async (req, res) => {
       "Allotted patients fetched successfully"
     )
   );
+});
+
+// when the access token is expired the user can generate a new access token with their refresh token
+
+export const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken =
+    req.cookies?.refreshToken || req.body.refreshToken;
+
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "No refresh token provided");
+  }
+
+  const decodedToken = jwt.verify(
+    incomingRefreshToken,
+    process.env.REFRESH_TOKEN_SECRET
+  );
+
+  const doctor = await Doctor.findById(decodedToken?._id);
+
+  if (!doctor) {
+    throw new ApiError(401, "Doctor not found");
+  }
+
+  // this is the IMPORTANT part what happening here is if the refresh token send through cookies
+  // or the body is not the same as in the database then it means the token is being compromised so we immediately
+  // clear all the cookies and the user is being logged out and has to login again to generate new refresh and access token
+
+  const isTokenValid = bcrypt.compare(
+    incomingRefreshToken,
+    doctor.refreshToken
+  );
+
+  if (!isTokenValid) {
+    // (Server-side logout) by removing the refresh token from the database
+    doctor.refreshToken = undefined;
+    await doctor.save({ validateBeforeSave: false });
+
+    // (Client-side logout) by clearning the cookies
+    const options = { httpOnly: true, secure: true };
+
+    return res
+      .status(403)
+      .clearCookie("accessToken", options)
+      .clearCookie("refreshToken", options)
+      .json(
+        new ApiResponse(
+          403,
+          null,
+          "Security Alert: Compromised token detected. All sessions cleared. Please login again."
+        )
+      );
+  }
+
+  const accessToken = doctor.generateAccessToken();
+  const newRefreshToken = doctor.generateRefreshToken();
+
+  // (REFRESH TOKEN ROTATION)
+  doctor.refreshToken = newRefreshToken;
+  await doctor.save({ validateBeforeSave: false });
+
+  const options = { httpOnly: true, secure: true };
+
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", newRefreshToken, options)
+    .json(new ApiResponse(200, { accessToken }, "Token rotated successfully"));
 });

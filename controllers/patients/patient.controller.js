@@ -7,6 +7,8 @@ import { sendEmail } from "../../utils/sendMail.js";
 import { summarizePDF } from "../../utils/aiSummarizer.js";
 import { uploadOnCloudinary } from "../../utils/cloudinary.js";
 
+// this controller is for the first login step where the user enters his/her email and pass and gets an otp on their email
+
 export const loginPatientStep1 = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -24,11 +26,14 @@ export const loginPatientStep1 = asyncHandler(async (req, res) => {
       .json(new ApiResponse(401, null, "Invalid credentials"));
   }
 
+  // creating a random otp on the server
+
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   patient.otp = otp;
   patient.otpExpiry = Date.now() + 10 * 60 * 1000; // 10 mins valid
-  await patient.save({ validateBeforeSave: false });
+  await patient.save({ validateBeforeSave: false }); // validateBeforeSave: false means no validation needs to be checked just save this data in the db as it is
 
+  // sending an email with the sendEmail utility function we have in the /middlewares folder
   await sendEmail(patient.email, otp);
 
   const sessionToken = jwt.sign(
@@ -48,7 +53,10 @@ export const loginPatientStep1 = asyncHandler(async (req, res) => {
     );
 });
 
+// this controller is the 2nd login step where user confirms his/her otp and then the access is granted
+
 export const verifyPatientOTP = asyncHandler(async (req, res) => {
+
   const { otp, sessionToken } = req.body;
 
   if (!otp || !sessionToken) {
@@ -56,6 +64,8 @@ export const verifyPatientOTP = asyncHandler(async (req, res) => {
       .status(400)
       .json(new ApiResponse(400, null, "OTP and Session Token are required"));
   }
+
+  // verifying the session token created at the time of first login step
 
   const decodedToken = jwt.verify(
     sessionToken,
@@ -85,7 +95,7 @@ export const verifyPatientOTP = asyncHandler(async (req, res) => {
   };
 
   const loggedInPatient = await Patient.findById(patient._id).select(
-    "-password -refreshToken -otp -otpExpiry"
+    "-password -refreshToken -otp -otpExpiry" // these fields will not be send in the response
   );
 
   return res
@@ -100,8 +110,10 @@ export const verifyPatientOTP = asyncHandler(async (req, res) => {
     );
 });
 
+// this controller helps patients upload their pdf reports and then aiSummarizer will generate a summary for doctor's convinience 
+
 export const uploadAndSummarizeReport = asyncHandler(async (req, res) => {
-  const reportLocalPath = req.file?.path;
+  const reportLocalPath = req.file?.path; // gets the local path of the pdf that we are uploading
 
   if (!reportLocalPath) {
     return res
@@ -109,7 +121,11 @@ export const uploadAndSummarizeReport = asyncHandler(async (req, res) => {
       .json(new ApiResponse(400, null, "PDF report is required"));
   }
 
+  // this utilty function is for summarizing the pdf it returns a 3-4 liner summary for doctor's convinience
+
   const summary = await summarizePDF(reportLocalPath);
+
+  // uploading the file on the cloudinary server
 
   const cloudinaryResponse = await uploadOnCloudinary(reportLocalPath);
 
@@ -120,10 +136,11 @@ export const uploadAndSummarizeReport = asyncHandler(async (req, res) => {
   }
 
   // updating the patient's medical history
-  const patient = await Patient.findByIdAndUpdate(
-    req.patient._id,
+
+  await Patient.findByIdAndUpdate(
+    req.user._id,
     {
-      $push: {
+      $push: { // $push is an array operator in mongodb helps us to push new data into our medicalHistory list
         medicalHistory: {
           reportUrl: cloudinaryResponse.url,
           aiSummary: summary,
@@ -131,7 +148,7 @@ export const uploadAndSummarizeReport = asyncHandler(async (req, res) => {
         },
       },
     },
-    { new: true }
+    { new: true } // this gives us the updated data from the mongodb database
   ).select("-password");
 
   return res.status(200).json(
