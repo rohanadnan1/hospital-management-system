@@ -4,6 +4,8 @@ import { ApiResponse } from "../../utils/apiResponse.js";
 import Doctor from "../../models/doctor.model.js";
 import Patient from "../../models/patient.model.js";
 import { hashPassword } from "../../utils/passwords.js";
+import Bed from "../../models/bed.model.js";
+import { ApiError } from "../../utils/apiError.js";
 
 export const adminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -115,7 +117,7 @@ export const registerPatient = asyncHandler(async (req, res) => {
         new ApiResponse(
           400,
           null,
-          "Zaroori fields (name, email, password, gender) missing hain"
+          "Important fields (name, email, password, gender) are required"
         )
       );
   }
@@ -155,6 +157,108 @@ export const registerPatient = asyncHandler(async (req, res) => {
   return res
     .status(201)
     .json(
-      new ApiResponse(201, createdPatient, "Patient registration kamyab rahi")
+      new ApiResponse(201, createdPatient, "Patient registered successfully")
     );
+});
+
+export const getAvailableBeds = asyncHandler(async (req, res) => {
+  const availableBeds = await Bed.find({ isOccupied: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, availableBeds, "Available beds fetched"));
+});
+
+export const allotResources = asyncHandler(async (req, res) => {
+  const { patientId, doctorId, bedId } = req.body;
+
+  if (!patientId || !doctorId || !bedId) {
+    throw new ApiError(400, "Details missing patientId, doctorId, bedId");
+  }
+
+  const doctor = await Doctor.findById(doctorId);
+  if (!doctor) throw new ApiError(404, "Doctor not found");
+
+  if (doctor.assignedPatients.length >= 3) {
+    throw new ApiError(400, "Doctor already have 3 patients assigned.");
+  }
+
+  const bed = await Bed.findById(bedId);
+  if (!bed) throw new ApiError(404, "Cannot find the bed");
+
+  if (bed.isOccupied) {
+    throw new ApiError(400, "bed already alloted to some other patient");
+  }
+
+  bed.isOccupied = true;
+  bed.assignedPatient = patientId;
+  await bed.save();
+
+  doctor.assignedPatients.push(patientId);
+  await doctor.save();
+
+  // C. Patient schema mein doctor aur bed ki details update karein
+  const updatedPatient = await Patient.findByIdAndUpdate(
+    patientId,
+    {
+      $set: {
+        assignedDoctor: doctorId,
+        bedAlloted: bedId,
+      },
+    },
+    { new: true }
+  );
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        patient: updatedPatient,
+        doctorName: doctor.name,
+        bedNumber: bed.bedNumber,
+      },
+      "Bed and Doctor is successfully alloted to the patient"
+    )
+  );
+});
+
+export const dischargePatient = asyncHandler(async (req, res) => {
+  const { patientId } = req.body;
+
+  const patient = await Patient.findById(patientId);
+  if (!patient) {
+    throw new ApiError(404, "Patient nahi mila.");
+  }
+
+  const doctorId = patient.assignedDoctor;
+  const bedId = patient.bedAlloted;
+
+  if (bedId) {
+    await Bed.findByIdAndUpdate(bedId, {
+      $set: {
+        isOccupied: false,
+        assignedPatient: null,
+      },
+    });
+  }
+
+  if (doctorId) {
+    const doctor = await Doctor.findById(doctorId);
+    if (doctor) {
+      doctor.assignedPatients = doctor.assignedPatients.filter(
+        (id) => id.toString() !== patientId.toString()
+      );
+
+      await doctor.save();
+    }
+  }
+
+  patient.assignedDoctor = null;
+  patient.bedAlloted = null;
+
+  await patient.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Patient successfully discharged"));
 });
